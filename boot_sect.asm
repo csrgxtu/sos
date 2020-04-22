@@ -46,9 +46,9 @@ BEGIN_PM:
 
 ; global variables
 BOOT_DRIVE      db 0
-MSG_REAL_MODE   db "starting in 16 bit real mode", 0
-MSG_PROT_MODE   db "successfully landed in 32 bit pm", 0
-MSG_LOAD_KERNEL db "loading kernel into memory", 0
+MSG_REAL_MODE   db "Starting in 16 bit real mode", 0
+MSG_PROT_MODE   db "Successfully landed in 32 bit pm", 0
+MSG_LOAD_KERNEL db "Loading kernel into memory", 0
 
 ; boot sector padding
 times 510 - ($ - $$) db 0

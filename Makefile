@@ -1,13 +1,13 @@
-all: os-image
+all: os-image.bin
 
 # run qemu to simulte booting of our code
 run: all
-	qemu-system-i386 os-image
+	qemu-system-i386 -fda os-image.bin
 
 # this is the actual disk image that the computer loads
 # which is the combination of our compiled bootsector and kernel
-os-image: boot_sect.bin kernel.bin
-	cat $^ > os-image
+os-image.bin: boot_sect.bin kernel.bin
+	cat $^ > os-image.bin
 
 # this builds the bin of our kernel from 2 objects
 # - the kernel_entry, which jumps to main() in our kernel
@@ -31,7 +31,7 @@ boot_sect.bin: boot_sect.asm
 
 # clear away all generated files
 clean:
-	rm -rf *.bin *.dis *.o os-image *.map
+	rm -rf *.bin *.dis *.o os-image.bin *.map
 
 # disassemble our kernel - might be useful for debugging
 kernel.dis: kernel.bin
