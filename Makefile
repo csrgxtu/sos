@@ -1,38 +1,46 @@
-all: os-image.bin
+C_SOURCES = $(wildcard kernel/*.c drivers/*.c)
+HEADERS = $(wildcard kernel/*.h drivers/*.h)
+# Nice syntax for file extension replacement
+OBJ = ${C_SOURCES:.c=.o}
 
-# run qemu to simulte booting of our code
-run: all
-	qemu-system-i386 -fda os-image.bin
+# Change this if your cross-compiler is somewhere else
+CC = /home/archer/bin/cross/bin/i686-elf-gcc
+GDB = /home/archer/bin/cross/bin/i686-elf-gdb
+# -g: Use debugging symbols in gcc
+CFLAGS = -g
 
-# this is the actual disk image that the computer loads
-# which is the combination of our compiled bootsector and kernel
-os-image.bin: boot_sect.bin kernel.bin
-	cat $^ > os-image.bin
+# First rule is run by default
+sos.bin: boot/boot_sect.bin kernel.bin
+	cat $^ > sos.bin
 
-# this builds the bin of our kernel from 2 objects
-# - the kernel_entry, which jumps to main() in our kernel
-# - the compiled c kernel
-kernel.bin: kernel_entry.o kernel.o
-	i686-elf-ld -o kernel.bin -Ttext 0x1000 $^ --oformat binary
+# '--oformat binary' deletes all symbols as a collateral, so we don't need
+# to 'strip' them manually on this case
+kernel.bin: boot/kernel_entry.o ${OBJ}
+	i686-elf-ld -o $@ -Ttext 0x1000 $^ --oformat binary
 
-# build our kernel object file
-kernel.o: kernel.c
-	i686-elf-gcc -ffreestanding -c $< -o $@
+# Used for debugging purposes
+kernel.elf: boot/kernel_entry.o ${OBJ}
+	i686-elf-ld -o $@ -Ttext 0x1000 $^ 
 
-# build our kernel_entry object file
-kernel_entry.o: kernel_entry.asm
+run: sos.bin
+	qemu-system-i386 -fda sos.bin
+
+# Open the connection to qemu and load our kernel-object file with symbols
+# debug: sos.bin kernel.elf
+# 	qemu-system-i386 -s -fda sos.bin &
+# 	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
+
+# Generic rules for wildcards
+# To make an object, always compile from its .c
+%.o: %.c ${HEADERS}
+	${CC} ${CFLAGS} -ffreestanding -c $< -o $@
+
+%.o: %.asm
 	nasm $< -f elf -o $@
 
-# assemble the boot sector to raw machine code
-# - the -i options tell nasm where to find out useful assembly
-# - routines that we include in boot_sect.asm
-boot_sect.bin: boot_sect.asm
-	nasm $< -f bin -I '.' -o $@
+%.bin: %.asm
+	nasm $< -f bin -o $@
 
-# clear away all generated files
 clean:
-	rm -rf *.bin *.dis *.o os-image.bin *.map
-
-# disassemble our kernel - might be useful for debugging
-kernel.dis: kernel.bin
-	ndisasm -b 32 $< > $@
+	rm -rf *.bin *.dis *.o sos.bin *.elf
+	rm -rf kernel/*.o boot/*.bin drivers/*.o boot/*.o
